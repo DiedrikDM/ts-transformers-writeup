@@ -1,5 +1,3 @@
-# TypeScript Transformers: Transform and Rise Up!
-
 I'm going to start with a major disappointment: this article has nothing to do with the eternal war of Autobots vs Decepticons! 
 Alright, now that's out of the way, let's look at TypeScript Transformers.
 
@@ -19,12 +17,12 @@ A TypeScript Transformer can be used to look at your existing code and introduce
 
 In TypeScript we can import and export functionality from one file to another in a very simple way.
 
-```TS
+```JavaScript
 import {sum} from './math';
 
 console.log(sum(20,22));
 ```
-```TS
+```JavaScript
 export function sum(a: number, b: number): number{
   return a + b;
 }
@@ -42,16 +40,16 @@ The TypeScript compiler on the other hand has a couple of issues in combination 
 
 If we look at the TypeScript from before and compile it, here's the end result in JavaScript.
 
-```JS
+```JavaScript
 import { sum } from "./math";
 console.log(sum(20, 22));
 
 ```
 Everything looks fine, except if you try it out in your browser, you'll get an error message:
 
-IMAGE OF ERROR MESSAGE - CANNOT LOAD
+![Error Message Cannot Load](https://raw.githubusercontent.com/DiedrikDM/ts-transformers-writeup/0bd3688e637db9e9267476c6f51457b5666eccc3/errormessage.PNG "Error Message Cannot Load")
 
-The problem is that when you compile TypeScript modules - which normally don't take an extension - it will not output an extension either. Which is a problem for the Native Module Loading of the browser.
+The problem is that when you compile TypeScript modules - which normally don't take an extension - it will not output an extension either. And that is a problem for the Native Module Loading of the browser.
 
 __How can we solve this?__
 1. We can add the .js file extension to the import statements in our TypeScript files. Even though the files are originally .ts files, this will work! It is the quickest solution, but ofcourse means you need to do this in every file importing functionality from a TypeScript file.
@@ -63,14 +61,14 @@ __How can we solve this?__
 If you want to create your own TypeScript Transformer, you need to know the API.
 The two most important types that are used:
 
-```TS
+```JavaScript
 type TransformerFactory<T extends Node> = (context: TransformationContext) => Transformer<T>;
 
 type Transformer<T extends Node> = (node: T) => T;
 ```
 The Factory needs to be called when we start the compilation process. It is a function that will create the actual Transformer which is another function. The Transformer will take any kind of node of the AST and needs to return a node by itself (the same or another).
 
-What kind of nodes might we encounter?
+__What kind of nodes might we encounter?__
   - CallExpression _like sum(1,2)_
   - BinaryExpression _like name = createName()_
   - ClassDeclaration _like class MyComponent {}_
@@ -79,14 +77,14 @@ What kind of nodes might we encounter?
   - MethodDeclaration
   - ….
 
-Now for the purpose of this example, we'll need to use __ImportDeclaration__.
+Now for the purpose of this example, we'll use __ImportDeclaration__.
 
 The import fixing code is in credit of this github repository: [https://github.com/Zoltu/typescript-transformer-append-js-extension](https://github.com/Zoltu/typescript-transformer-append-js-extension).
 
 __1. Check if it's necessary to fix the import__
 
-In the following piece of code we'll check if the Import Module Specifier actually needs to be fixed. We will only update it if it is indeed an Import or ExportDeclaration, if it is a String, if it is a relative path and if it does not end with a file extension.
-```TS
+In the following piece of code we'll check if the Import Module Specifier needs to be fixed. We will only update the specifier if it is indeed an Import or ExportDeclaration, if it is a String, if it is a relative path, and if it does not end with a file extension.
+```JavaScript
 function shouldMutateModuleSpecifier(node: typescript.Node): node is (typescript.ImportDeclaration | typescript.ExportDeclaration) & { moduleSpecifier: typescript.StringLiteral } {
   if (!typescript.isImportDeclaration(node) && !typescript.isExportDeclaration(node)) return false
 
@@ -109,7 +107,7 @@ __2. Update the Import/Export Declaration__
 
 After we checked whether an update is required, we'll do the actual update. The fix is pretty simple, we need to add the .js file extension - so appending .js to the filename is sufficient.
 
-``` TS
+```JavaScript
 function visitNode(node: typescript.Node): typescript.VisitResult<typescript.Node> {
   if (shouldMutateModuleSpecifier(node)) {
     if (typescript.isImportDeclaration(node)) {
@@ -127,9 +125,9 @@ function visitNode(node: typescript.Node): typescript.VisitResult<typescript.Nod
 
 __3. Put everything in the TransformerFactory__
 
-Now we need to wrap everything into a function that will be used to create the Transformer. In this Transformer we should include the _visitNode_ function and the _shouldMutateModuleSpecifier_ function on the position of the ellipses (...).
+Now we need to wrap everything into a function that will be used to create the Transformer. In this Transformer we should include the previously created _visitNode_ function and the _shouldMutateModuleSpecifier_ function on the position of the ellipses (...).
 
-```TS
+```JavaScript
 import * as typescript from 'typescript'
 import * as path from 'path'
 
@@ -146,7 +144,7 @@ export default transformer
 
 ## Using the Transformer
 
-Now it's great that we have the actual Transformer, but we need to call it during the compilation process. The problem is, there's no way to just hook it into the standard __tsc__ compiler. The TypeScript team has something in the pipeline to fix this ([TypeScript issue 14419](https://github.com/Microsoft/TypeScript/issues/14419#issuecomment-484162367)). However as of this writing, there are two possible solutions:
+Now it's great that we have the actual Transformer, but we need to call it during the compilation process. The next issue is, there's no way to just hook it into the standard __tsc__ compiler. The TypeScript team has something in the pipeline to fix this ([TypeScript issue 14419](https://github.com/Microsoft/TypeScript/issues/14419#issuecomment-484162367)). However as of this writing, there are only two possible solutions:
 
 1. Create our own build executable that will run our Transformer step. The problem with this - which is already a thing - is that every tool/bundler/builder will have its own way of working without standardization. And we're now adding another one to that collection.
 
@@ -182,7 +180,7 @@ npx ttsc
 
 And this will make sure the .js file extension gets added to our import statement!
 
-``` JS
+```JavaScript
 import { sum } from "./math.js";
 console.log(sum(20, 22));
 ```
